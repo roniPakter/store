@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const cofig = require('config');
+const config = require('config');
 
 const auth = (req, res, next) => {
     const token = req.header('x-auth-token');
@@ -13,6 +13,7 @@ const auth = (req, res, next) => {
         req.user = decoded.user;
         next();
     } catch (error) {
+        console.log(error);
         res.status(401).json({ msg: 'token is not valid' });
     }
 }
