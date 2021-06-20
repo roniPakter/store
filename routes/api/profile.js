@@ -32,22 +32,77 @@ router.post('/',
 
         const { phone, role } = req.body;
         const newProfile = {};
+        console.log(req.user);
         newProfile.user = req.user.id;
         if (phone) newProfile.phone = phone;
         if (role) newProfile.role = role;
 
         
         try {
-            let profile = Profile.findOne({ user: req.user.id })
-            new Profile(newProfile);
-        
-            profile.save();
-            res.send(profile);
+            let profile = await Profile.findOne({ user: req.user.id });
+            console.log(42);
+            if (profile){
+                console.log(44);
+                
+                profile = await Profile.findOneAndUpdate(
+                    { user: req.user.id }, 
+                    { $set: newProfile }, 
+                    { new: true });
+                return res.json(profile);
+            }
+            console.log(48);
+            profile = new Profile(newProfile);
+            await profile.save();
+            console.log(51);
+            res.json(profile);
 
         } catch (error) {
             console.log(error.message);
             res.status(500).send('Server Error')
         }
-})
+});
+
+router.get('/', async (req,res) => {
+    try {
+        const profiles = await Profile.find().populate('user', ['name' , 'avater']);
+        res.json(profiles);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+router.get('/user/:user_id', async (req,res) => {
+    try {
+        const profile = await Profile.findOne({ user: req.params.user_id }).populate('user', ['name' , 'avater']);
+
+        if (!profile) {
+            return res.status(400).json({ msg: 'No profile for this user' });
+        }
+
+        res.json(profile);
+
+    } catch (error) {
+        console.error(error.message);
+        if(error.kind == 'ObjectId'){
+            return res.status(400).json({ msg: 'No profile for this user' });
+        }
+        res.status(500).send('Server Error');
+    }
+});
+
+router.delete('/',auth, async (req,res) => {
+    try {
+        //delete the profile
+        await Profile.findOneAndRemove({ user: req.user.id });
+        //delete the user
+        await User.findOneAndRemove({ _id: req.user.id });
+        
+        res.json({ msg: 'User Deleted' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 module.exports = router;
